@@ -51,8 +51,15 @@ The installer finds the user's E-Day config folder, creates a fresh backup for
 each installation, and changes only `Engine.ini` and `Scalability.ini`.
 `GameUserSettings.ini` is backed up but not overwritten.
 
-To restore the newest installer backup, run:
+To restore the saved pre-install configuration, double-click
+`Rollback-EDayPerformance.cmd`. If the current files already match the saved
+rollback/default configuration, it performs no operation. Otherwise it shows:
+
+1. Roll back
+2. Do nothing
+
+The PowerShell entrypoint is also available directly:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Restore-EDayPerformance.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Rollback-EDayPerformance.ps1
 ```

@@ -53,6 +53,22 @@ foreach ($name in @('Engine.ini','GameUserSettings.ini','Scalability.ini')) {
     }
 }
 
+# Keep a clearly named, portable rollback copy alongside the repository.
+$rollback = Join-Path $repo 'rollback'
+New-Item -ItemType Directory -Path $rollback -Force | Out-Null
+foreach ($name in @('Engine.ini','GameUserSettings.ini')) {
+    Copy-Item -LiteralPath (Join-Path $backup $name) -Destination (Join-Path $rollback $name) -Force
+}
+$rollbackScalability = Join-Path $rollback 'Scalability.ini'
+if (Test-Path -LiteralPath (Join-Path $backup 'Scalability.ini')) {
+    Copy-Item -LiteralPath (Join-Path $backup 'Scalability.ini') -Destination $rollbackScalability -Force
+    $absentMarker = Join-Path $rollback 'Scalability.ini.absent'
+    if (Test-Path -LiteralPath $absentMarker) { Remove-Item -LiteralPath $absentMarker -Force }
+} else {
+    if (Test-Path -LiteralPath $rollbackScalability) { Remove-Item -LiteralPath $rollbackScalability -Force }
+    New-Item -ItemType File -Path (Join-Path $rollback 'Scalability.ini.absent') -Force | Out-Null
+}
+
 Copy-Item -LiteralPath $engineSource -Destination (Join-Path $game 'Engine.ini') -Force
 Copy-Item -LiteralPath $scalabilitySource -Destination (Join-Path $game 'Scalability.ini') -Force
 
