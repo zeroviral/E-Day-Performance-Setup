@@ -37,3 +37,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Restore-Default.ps1
 ```
 
 This restores the backed-up files and removes the installed `Scalability.ini`.
+
+## Portable installer
+
+Run `Install-EDayPerformance.cmd` from this repository. Choose:
+
+1. Maximum Performance: the lowest practical quality profile, with ray tracing
+   and Lumen disabled.
+2. Enhanced Performance: low geometry/textures/foliage with better lighting,
+   reflections, effects, and fog retained.
+
+The installer finds the user's E-Day config folder, creates a fresh backup for
+each installation, and changes only `Engine.ini` and `Scalability.ini`.
+`GameUserSettings.ini` is backed up but not overwritten.
+
+To restore the newest installer backup, run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Restore-EDayPerformance.ps1
+```
