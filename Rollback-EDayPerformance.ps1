@@ -43,9 +43,14 @@ if ($same) {
     exit 0
 }
 
-if (Get-Process -Name 'GoWEDay-Steam','GoWEDay','GoWEDay-WinGDK' -ErrorAction SilentlyContinue) {
-    throw 'Close E-Day before rolling back settings.'
+function Wait-ForEdayExit {
+    while (Get-Process -Name 'GoWEDay-Steam','GoWEDay','GoWEDay-WinGDK' -ErrorAction SilentlyContinue) {
+        Write-Host 'E-Day is running. Close or force-quit it; waiting for the process to exit...' -ForegroundColor Yellow
+        Start-Sleep -Seconds 2
+    }
 }
+
+Wait-ForEdayExit
 
 Write-Host 'A different E-Day performance configuration is currently installed.' -ForegroundColor Yellow
 Write-Host '1 - Roll back to the saved pre-install configuration'

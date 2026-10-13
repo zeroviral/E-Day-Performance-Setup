@@ -20,9 +20,14 @@ function Find-EdayConfig {
     return $null
 }
 
-if (Get-Process -Name 'GoWEDay-Steam','GoWEDay','GoWEDay-WinGDK' -ErrorAction SilentlyContinue) {
-    throw 'Close E-Day before installing a performance profile.'
+function Wait-ForEdayExit {
+    while (Get-Process -Name 'GoWEDay-Steam','GoWEDay','GoWEDay-WinGDK' -ErrorAction SilentlyContinue) {
+        Write-Host 'E-Day is running. Close or force-quit it; waiting for the process to exit...' -ForegroundColor Yellow
+        Start-Sleep -Seconds 2
+    }
 }
+
+Wait-ForEdayExit
 
 $game = Find-EdayConfig
 if (-not $game) {

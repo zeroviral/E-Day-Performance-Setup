@@ -51,6 +51,10 @@ The installer finds the user's E-Day config folder, creates a fresh backup for
 each installation, and changes only `Engine.ini` and `Scalability.ini`.
 `GameUserSettings.ini` is backed up but not overwritten.
 
+If E-Day is still running, the installer waits and polls until the game exits.
+Closing or force-quitting E-Day is detected automatically; press Ctrl+C to
+cancel the wait.
+
 To restore the saved pre-install configuration, double-click
 `Rollback-EDayPerformance.cmd`. If the current files already match the saved
 rollback/default configuration, it performs no operation. Otherwise it shows:
