@@ -40,15 +40,19 @@ This restores the backed-up files and removes the installed `Scalability.ini`.
 
 ## Portable installer
 
-Run `Install-EDayPerformance.cmd` from this repository. Choose:
+Run `Install-EDayPerformance.cmd` from this repository. The installer first
+reports the currently installed profile, then offers:
 
 1. Maximum Performance: the lowest practical quality profile, with ray tracing
    and Lumen disabled.
 2. Enhanced Performance: low geometry/textures/foliage with better lighting,
    reflections, effects, and fog retained.
+3. Cancel.
 
-The installer finds the user's E-Day config folder, creates a fresh backup for
-each installation, and changes only `Engine.ini` and `Scalability.ini`.
+Selecting the already-installed profile is a no-op. Selecting the other
+profile switches to it and creates a fresh rollback snapshot first. The
+installer finds the user's E-Day config folder and changes only `Engine.ini`
+and `Scalability.ini`.
 `GameUserSettings.ini` is backed up but not overwritten.
 
 If E-Day is still running, the installer waits and polls until the game exits.

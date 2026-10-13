@@ -1,6 +1,6 @@
 param(
     [ValidateSet('MAXIMUM','ENHANCED')]
-    [string]$Profile = 'ENHANCED'
+    [string]$Profile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,6 +20,36 @@ function Find-EdayConfig {
     return $null
 }
 
+function Get-HashOrMissing([string]$path) {
+    if (Test-Path -LiteralPath $path) { return (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
+    return '<missing>'
+}
+
+function Get-InstalledProfile([string]$gamePath) {
+    $live = Get-HashOrMissing (Join-Path $gamePath 'Scalability.ini')
+    $maximum = Get-HashOrMissing (Join-Path $repo 'Scalability-Maximum.ini')
+    $enhanced = Get-HashOrMissing (Join-Path $repo 'Scalability.ini')
+    if ($live -eq '<missing>') { return 'Default / no performance profile' }
+    if ($live -eq $maximum) { return 'Maximum Performance' }
+    if ($live -eq $enhanced) { return 'Enhanced Performance' }
+    return 'Custom / unknown profile'
+}
+
+function Select-Profile([string]$current) {
+    Write-Host 'Gears of War: E-Day performance profiles'
+    Write-Host "Currently installed: $current" -ForegroundColor Cyan
+    Write-Host ''
+    Write-Host '1 - Maximum Performance'
+    Write-Host '2 - Enhanced Performance'
+    Write-Host '3 - Cancel'
+    do { $choice = Read-Host 'Choose 1, 2, or 3' } while ($choice -notin @('1','2','3'))
+    switch ($choice) {
+        '1' { return 'MAXIMUM' }
+        '2' { return 'ENHANCED' }
+        default { return $null }
+    }
+}
+
 function Wait-ForEdayExit {
     while (Get-Process -Name 'GoWEDay-Steam','GoWEDay','GoWEDay-WinGDK' -ErrorAction SilentlyContinue) {
         Write-Host 'E-Day is running. Close or force-quit it; waiting for the process to exit...' -ForegroundColor Yellow
@@ -32,6 +62,18 @@ Wait-ForEdayExit
 $game = Find-EdayConfig
 if (-not $game) {
     throw 'E-Day settings were not found. Launch E-Day once, close it, then run this installer again.'
+}
+
+$current = Get-InstalledProfile $game
+if (-not $Profile) { $Profile = Select-Profile $current }
+if (-not $Profile) {
+    Write-Host 'No changes made.'
+    exit 0
+}
+$selectedName = if ($Profile -eq 'MAXIMUM') { 'Maximum Performance' } else { 'Enhanced Performance' }
+if ($current -eq $selectedName) {
+    Write-Host "No operation: $selectedName is already installed." -ForegroundColor Green
+    exit 0
 }
 
 $engineSource = Join-Path $repo 'Engine.ini'
