@@ -49,8 +49,9 @@ reports the currently installed profile, then offers:
    reflections, effects, and fog retained.
 3. Cancel.
 
-Selecting the already-installed profile is a no-op. Selecting the other
-profile switches to it and creates a fresh rollback snapshot first. The
+The active profile is highlighted with `[ACTIVE]` and is not offered as a
+selection. Selecting the other profile switches to it and creates a fresh
+rollback snapshot first. The
 installer finds the user's E-Day config folder and changes only `Engine.ini`
 and `Scalability.ini`.
 `GameUserSettings.ini` is backed up but not overwritten.

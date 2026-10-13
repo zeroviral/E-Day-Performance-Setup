@@ -39,15 +39,29 @@ function Select-Profile([string]$current) {
     Write-Host 'Gears of War: E-Day performance profiles'
     Write-Host "Currently installed: $current" -ForegroundColor Cyan
     Write-Host ''
-    Write-Host '1 - Maximum Performance'
-    Write-Host '2 - Enhanced Performance'
+    if ($current -eq 'Maximum Performance') {
+        Write-Host '  Maximum Performance [ACTIVE]' -ForegroundColor Green
+        Write-Host '1 - Switch to Enhanced Performance'
+        Write-Host '2 - Cancel'
+        do { $choice = Read-Host 'Choose 1 or 2' } while ($choice -notin @('1','2'))
+        if ($choice -eq '1') { return 'ENHANCED' }
+        return $null
+    }
+    if ($current -eq 'Enhanced Performance') {
+        Write-Host '1 - Switch to Maximum Performance'
+        Write-Host '  Enhanced Performance [ACTIVE]' -ForegroundColor Green
+        Write-Host '2 - Cancel'
+        do { $choice = Read-Host 'Choose 1 or 2' } while ($choice -notin @('1','2'))
+        if ($choice -eq '1') { return 'MAXIMUM' }
+        return $null
+    }
+    Write-Host '1 - Install Maximum Performance'
+    Write-Host '2 - Install Enhanced Performance'
     Write-Host '3 - Cancel'
     do { $choice = Read-Host 'Choose 1, 2, or 3' } while ($choice -notin @('1','2','3'))
-    switch ($choice) {
-        '1' { return 'MAXIMUM' }
-        '2' { return 'ENHANCED' }
-        default { return $null }
-    }
+    if ($choice -eq '1') { return 'MAXIMUM' }
+    if ($choice -eq '2') { return 'ENHANCED' }
+    return $null
 }
 
 function Wait-ForEdayExit {
