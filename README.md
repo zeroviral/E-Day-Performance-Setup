@@ -62,6 +62,9 @@ rollback/default configuration, it performs no operation. Otherwise it shows:
 1. Roll back
 2. Do nothing
 
+The rollback script also reports whether the current profile is Maximum
+Performance, Enhanced Performance, Default/no profile, or Custom/unknown.
+
 The PowerShell entrypoint is also available directly:
 
 ```powershell

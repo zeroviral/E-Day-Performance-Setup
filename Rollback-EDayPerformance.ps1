@@ -21,9 +21,20 @@ function Get-HashOrMissing([string]$path) {
     return '<missing>'
 }
 
+function Get-InstalledProfile([string]$gamePath) {
+    $live = Get-HashOrMissing (Join-Path $gamePath 'Scalability.ini')
+    $maximum = Get-HashOrMissing (Join-Path $repo 'Scalability-Maximum.ini')
+    $enhanced = Get-HashOrMissing (Join-Path $repo 'Scalability.ini')
+    if ($live -eq '<missing>') { return 'Default / no performance profile' }
+    if ($live -eq $maximum) { return 'Maximum Performance' }
+    if ($live -eq $enhanced) { return 'Enhanced Performance' }
+    return 'Custom / unknown profile'
+}
+
 if (-not (Test-Path -LiteralPath $rollback)) { throw 'No rollback configuration exists yet. Run the installer first.' }
 $game = Find-EdayConfig
 if (-not $game) { throw 'E-Day settings were not found.' }
+Write-Host "Currently installed: $(Get-InstalledProfile $game)" -ForegroundColor Cyan
 
 $same = $true
 foreach ($name in @('Engine.ini','GameUserSettings.ini')) {
