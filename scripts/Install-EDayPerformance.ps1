@@ -7,14 +7,20 @@ $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
 function Find-EdayConfig {
+    # Xbox app / PC Game Pass (WinGDK) builds keep their config under
+    # %LOCALAPPDATA%\FairlightConcept\Saved\Config\WinGDK.
+    $preferred = Join-Path $env:LOCALAPPDATA 'FairlightConcept\Saved\Config\WinGDK'
+    if (Test-Path -LiteralPath (Join-Path $preferred 'GameUserSettings.ini')) { return $preferred }
     $roots = @(
-        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day\Steam'),
-        (Join-Path $env:LOCALAPPDATA 'FairlightConcept')
+        (Join-Path $env:LOCALAPPDATA 'FairlightConcept'),
+        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day')
     )
     foreach ($root in $roots) {
         if (-not (Test-Path -LiteralPath $root)) { continue }
-        $folders = @((Get-Item -LiteralPath $root)) + @(Get-ChildItem -LiteralPath $root -Directory -Recurse -ErrorAction SilentlyContinue)
-        $match = $folders | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'GameUserSettings.ini') } | Select-Object -First 1
+        $match = Get-ChildItem -LiteralPath $root -Directory -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -eq 'WinGDK' -and $_.FullName -notmatch '\\Steam\\' } |
+            Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'GameUserSettings.ini') } |
+            Select-Object -First 1
         if ($match) { return $match.FullName }
     }
     return $null
@@ -65,7 +71,7 @@ function Select-Profile([string]$current) {
 }
 
 function Wait-ForEdayExit {
-    while (Get-Process -Name 'GoWEDay-Steam','GoWEDay','GoWEDay-WinGDK' -ErrorAction SilentlyContinue) {
+    while (Get-Process -Name 'GoWEDay-WinGDK','GoWEDay' -ErrorAction SilentlyContinue) {
         Write-Host 'E-Day is running. Close or force-quit it; waiting for the process to exit...' -ForegroundColor Yellow
         Start-Sleep -Seconds 2
     }
@@ -75,7 +81,7 @@ Wait-ForEdayExit
 
 $game = Find-EdayConfig
 if (-not $game) {
-    throw 'E-Day settings were not found. Launch E-Day once, close it, then run this installer again.'
+    throw 'Xbox app E-Day settings were not found. Launch E-Day from the Xbox app once, close it, then run this installer again.'
 }
 
 $current = Get-InstalledProfile $game

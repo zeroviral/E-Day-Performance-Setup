@@ -3,14 +3,20 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $rollback = Join-Path $repo 'rollback'
 
 function Find-EdayConfig {
+    # Xbox app / PC Game Pass (WinGDK) builds keep their config under
+    # %LOCALAPPDATA%\FairlightConcept\Saved\Config\WinGDK.
+    $preferred = Join-Path $env:LOCALAPPDATA 'FairlightConcept\Saved\Config\WinGDK'
+    if (Test-Path -LiteralPath (Join-Path $preferred 'GameUserSettings.ini')) { return $preferred }
     $roots = @(
-        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day\Steam'),
-        (Join-Path $env:LOCALAPPDATA 'FairlightConcept')
+        (Join-Path $env:LOCALAPPDATA 'FairlightConcept'),
+        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day')
     )
     foreach ($root in $roots) {
         if (-not (Test-Path -LiteralPath $root)) { continue }
-        $folders = @((Get-Item -LiteralPath $root)) + @(Get-ChildItem -LiteralPath $root -Directory -Recurse -ErrorAction SilentlyContinue)
-        $match = $folders | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'GameUserSettings.ini') } | Select-Object -First 1
+        $match = Get-ChildItem -LiteralPath $root -Directory -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -eq 'WinGDK' -and $_.FullName -notmatch '\\Steam\\' } |
+            Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'GameUserSettings.ini') } |
+            Select-Object -First 1
         if ($match) { return $match.FullName }
     }
     return $null
@@ -33,7 +39,7 @@ function Get-InstalledProfile([string]$gamePath) {
 
 if (-not (Test-Path -LiteralPath $rollback)) { throw 'No rollback configuration exists yet. Run the installer first.' }
 $game = Find-EdayConfig
-if (-not $game) { throw 'E-Day settings were not found.' }
+if (-not $game) { throw 'Xbox app E-Day settings were not found.' }
 Write-Host "Currently installed: $(Get-InstalledProfile $game)" -ForegroundColor Cyan
 
 $same = $true
@@ -55,7 +61,7 @@ if ($same) {
 }
 
 function Wait-ForEdayExit {
-    while (Get-Process -Name 'GoWEDay-Steam','GoWEDay','GoWEDay-WinGDK' -ErrorAction SilentlyContinue) {
+    while (Get-Process -Name 'GoWEDay-WinGDK','GoWEDay' -ErrorAction SilentlyContinue) {
         Write-Host 'E-Day is running. Close or force-quit it; waiting for the process to exit...' -ForegroundColor Yellow
         Start-Sleep -Seconds 2
     }

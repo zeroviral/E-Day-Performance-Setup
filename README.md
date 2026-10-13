@@ -1,4 +1,4 @@
-# Gears of War: E-Day performance setup
+# Gears of War: E-Day performance setup (Xbox app / PC Game Pass)
 
 This repository contains the new E-Day performance configuration studied from
 `Downloads\New eDay perf stuff`.
@@ -12,9 +12,15 @@ This repository contains the new E-Day performance configuration studied from
   reflections, and fog remain above the low profile while ray tracing remains
   disabled.
 
-The live target is:
+This version targets the Xbox app / PC Game Pass (WinGDK) build. The live
+target is:
 
-`%LOCALAPPDATA%\Microsoft\Gears of War E-Day\Steam\6BE41AB5\Saved\Config\Windows`
+`%LOCALAPPDATA%\FairlightConcept\Saved\Config\WinGDK`
+
+If that folder is missing, the scripts search `%LOCALAPPDATA%\FairlightConcept`
+and `%LOCALAPPDATA%\Microsoft\Gears of War E-Day` for a `WinGDK` config folder
+containing `GameUserSettings.ini`. Steam folders are ignored. Launch E-Day from
+the Xbox app at least once before running the installer so the folder exists.
 
 `GameUserSettings.ini` is intentionally preserved. It contains resolution,
 HDR, audio, controls, and account-specific settings.
