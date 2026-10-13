@@ -5,28 +5,34 @@ This repository contains the new E-Day performance configuration studied from
 
 ## Installed files
 
-- `Engine.ini`: aggressive performance engine settings with ray tracing/Lumen
+- `profiles\Engine.ini`: aggressive performance engine settings with ray tracing/Lumen
   disabled, reduced shadow/foliage/Nanite cost, streaming tweaks, VSync off,
   and an uncapped frame rate.
-- `Scalability.ini`: enhanced-performance quality groups. Lighting, effects,
+- `profiles\Scalability.ini`: enhanced-performance quality groups. Lighting, effects,
   reflections, and fog remain above the low profile while ray tracing remains
   disabled.
 
-The live target is:
+The installer detects the installed platform automatically. The live targets are:
 
-`%LOCALAPPDATA%\Microsoft\Gears of War E-Day\Steam\6BE41AB5\Saved\Config\Windows`
+- Steam: `%LOCALAPPDATA%\Microsoft\Gears of War E-Day\Steam\6BE41AB5\Saved\Config\Windows`
+- Xbox / WinGDK: `%LOCALAPPDATA%\Microsoft\Gears of War E-Day\WinGDK\6BE41AB5\Saved\Config\WinGDK`
+
+If only one platform has a `GameUserSettings.ini`, it is selected automatically. If
+both are installed, the installer asks which platform to modify. The rollback tool
+uses the same platform selection.
 
 `GameUserSettings.ini` is intentionally preserved. It contains resolution,
 HDR, audio, controls, and account-specific settings.
 
 ## Rollback snapshot
 
-The installer saves the user's default settings once in:
+The installer saves the selected platform's settings once in:
 
-`rollback\`
+`rollback\` for the existing Steam snapshot, or `rollback\WINGDK\` for Xbox.
 
 It does not create a new backup when switching between profiles, so repeated
-installs do not grow the repository. The snapshot contains the current
+installs do not grow the repository. Each platform has an independent snapshot.
+The snapshot contains the current
 `Engine.ini` and `GameUserSettings.ini`, plus either the original
 `Scalability.ini` or a marker stating that it was absent.
 

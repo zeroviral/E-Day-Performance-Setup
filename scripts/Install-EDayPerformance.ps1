@@ -6,18 +6,48 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
-function Find-EdayConfig {
-    $roots = @(
-        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day\Steam'),
-        (Join-Path $env:LOCALAPPDATA 'FairlightConcept')
+function Find-PlatformConfigs {
+    $base = Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day'
+    $definitions = @(
+        [pscustomobject]@{ Key = 'STEAM'; Name = 'Steam'; Root = (Join-Path $base 'Steam') },
+        [pscustomobject]@{ Key = 'WINGDK'; Name = 'Xbox / WinGDK'; Root = (Join-Path $base 'WinGDK') }
     )
-    foreach ($root in $roots) {
-        if (-not (Test-Path -LiteralPath $root)) { continue }
-        $folders = @((Get-Item -LiteralPath $root)) + @(Get-ChildItem -LiteralPath $root -Directory -Recurse -ErrorAction SilentlyContinue)
+    $found = @()
+    foreach ($definition in $definitions) {
+        if (-not (Test-Path -LiteralPath $definition.Root)) { continue }
+        $folders = @((Get-Item -LiteralPath $definition.Root)) + @(Get-ChildItem -LiteralPath $definition.Root -Directory -Recurse -ErrorAction SilentlyContinue)
         $match = $folders | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'GameUserSettings.ini') } | Select-Object -First 1
-        if ($match) { return $match.FullName }
+        if ($match) {
+            $found += [pscustomobject]@{
+                Key = $definition.Key
+                Name = $definition.Name
+                Path = $match.FullName
+            }
+        }
     }
-    return $null
+    return $found
+}
+
+function Select-Platform([array]$platforms) {
+    if ($platforms.Count -eq 1) { return $platforms[0] }
+    Write-Host 'Multiple E-Day installations found:' -ForegroundColor Cyan
+    for ($i = 0; $i -lt $platforms.Count; $i++) {
+        Write-Host ("{0} - {1}: {2}" -f ($i + 1), $platforms[$i].Name, $platforms[$i].Path)
+    }
+    Write-Host ("{0} - Cancel" -f ($platforms.Count + 1))
+    $valid = 1..($platforms.Count + 1) | ForEach-Object { $_.ToString() }
+    do { $choice = Read-Host ("Choose 1-{0}" -f ($platforms.Count + 1)) } while ($choice -notin $valid)
+    if ([int]$choice -eq $platforms.Count + 1) { return $null }
+    return $platforms[[int]$choice - 1]
+}
+
+function Get-RollbackPath([string]$platformKey) {
+    $rollbackRoot = Join-Path $repo 'rollback'
+    # Preserve the existing repository layout: rollback\ is the legacy Steam snapshot.
+    if ($platformKey -eq 'STEAM' -and (Test-Path -LiteralPath (Join-Path $rollbackRoot 'Engine.ini'))) {
+        return $rollbackRoot
+    }
+    return Join-Path $rollbackRoot $platformKey
 }
 
 function Get-HashOrMissing([string]$path) {
@@ -27,8 +57,8 @@ function Get-HashOrMissing([string]$path) {
 
 function Get-InstalledProfile([string]$gamePath) {
     $live = Get-HashOrMissing (Join-Path $gamePath 'Scalability.ini')
-    $maximum = Get-HashOrMissing (Join-Path $repo 'Scalability-Maximum.ini')
-    $enhanced = Get-HashOrMissing (Join-Path $repo 'Scalability.ini')
+    $maximum = Get-HashOrMissing (Join-Path $repo 'profiles\Scalability-Maximum.ini')
+    $enhanced = Get-HashOrMissing (Join-Path $repo 'profiles\Scalability.ini')
     if ($live -eq '<missing>') { return 'Default / no performance profile' }
     if ($live -eq $maximum) { return 'Maximum Performance' }
     if ($live -eq $enhanced) { return 'Enhanced Performance' }
@@ -71,12 +101,19 @@ function Wait-ForEdayExit {
     }
 }
 
-Wait-ForEdayExit
-
-$game = Find-EdayConfig
-if (-not $game) {
+$platforms = @(Find-PlatformConfigs)
+if ($platforms.Count -eq 0) {
     throw 'E-Day settings were not found. Launch E-Day once, close it, then run this installer again.'
 }
+$platform = Select-Platform $platforms
+if (-not $platform) {
+    Write-Host 'No changes made.'
+    exit 0
+}
+$game = $platform.Path
+Write-Host "Selected platform: $($platform.Name)" -ForegroundColor Cyan
+
+Wait-ForEdayExit
 
 $current = Get-InstalledProfile $game
 if (-not $Profile) { $Profile = Select-Profile $current }
@@ -90,17 +127,18 @@ if ($current -eq $selectedName) {
     exit 0
 }
 
-$engineSource = Join-Path $repo 'Engine.ini'
+$profiles = Join-Path $repo 'profiles'
+$engineSource = Join-Path $profiles 'Engine.ini'
 $scalabilitySource = if ($Profile -eq 'MAXIMUM') {
-    Join-Path $repo 'Scalability-Maximum.ini'
+    Join-Path $profiles 'Scalability-Maximum.ini'
 } else {
-    Join-Path $repo 'Scalability.ini'
+    Join-Path $profiles 'Scalability.ini'
 }
 foreach ($source in @($engineSource, $scalabilitySource)) {
     if (-not (Test-Path -LiteralPath $source)) { throw "Repository file missing: $source" }
 }
 
-$rollback = Join-Path $repo 'rollback'
+$rollback = Get-RollbackPath $platform.Key
 $rollbackEngine = Join-Path $rollback 'Engine.ini'
 $rollbackSettings = Join-Path $rollback 'GameUserSettings.ini'
 $rollbackScalability = Join-Path $rollback 'Scalability.ini'
@@ -123,7 +161,7 @@ if (-not $rollbackReady) {
     } else {
         New-Item -ItemType File -Path $rollbackAbsent -Force | Out-Null
     }
-    Write-Host 'Saved the default settings once in the rollback folder.' -ForegroundColor Yellow
+    Write-Host "Saved the $($platform.Name) default settings once in the rollback folder." -ForegroundColor Yellow
 } else {
     Write-Host 'Existing default rollback snapshot preserved; no new backup created.'
 }

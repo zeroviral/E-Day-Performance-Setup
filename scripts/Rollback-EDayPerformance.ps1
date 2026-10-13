@@ -1,19 +1,46 @@
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$rollback = Join-Path $repo 'rollback'
-
-function Find-EdayConfig {
-    $roots = @(
-        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day\Steam'),
-        (Join-Path $env:LOCALAPPDATA 'FairlightConcept')
+function Find-PlatformConfigs {
+    $base = Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day'
+    $definitions = @(
+        [pscustomobject]@{ Key = 'STEAM'; Name = 'Steam'; Root = (Join-Path $base 'Steam') },
+        [pscustomobject]@{ Key = 'WINGDK'; Name = 'Xbox / WinGDK'; Root = (Join-Path $base 'WinGDK') }
     )
-    foreach ($root in $roots) {
-        if (-not (Test-Path -LiteralPath $root)) { continue }
-        $folders = @((Get-Item -LiteralPath $root)) + @(Get-ChildItem -LiteralPath $root -Directory -Recurse -ErrorAction SilentlyContinue)
+    $found = @()
+    foreach ($definition in $definitions) {
+        if (-not (Test-Path -LiteralPath $definition.Root)) { continue }
+        $folders = @((Get-Item -LiteralPath $definition.Root)) + @(Get-ChildItem -LiteralPath $definition.Root -Directory -Recurse -ErrorAction SilentlyContinue)
         $match = $folders | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'GameUserSettings.ini') } | Select-Object -First 1
-        if ($match) { return $match.FullName }
+        if ($match) {
+            $found += [pscustomobject]@{
+                Key = $definition.Key
+                Name = $definition.Name
+                Path = $match.FullName
+            }
+        }
     }
-    return $null
+    return $found
+}
+
+function Select-Platform([array]$platforms) {
+    if ($platforms.Count -eq 1) { return $platforms[0] }
+    Write-Host 'Multiple E-Day installations found:' -ForegroundColor Cyan
+    for ($i = 0; $i -lt $platforms.Count; $i++) {
+        Write-Host ("{0} - {1}: {2}" -f ($i + 1), $platforms[$i].Name, $platforms[$i].Path)
+    }
+    Write-Host ("{0} - Cancel" -f ($platforms.Count + 1))
+    $valid = 1..($platforms.Count + 1) | ForEach-Object { $_.ToString() }
+    do { $choice = Read-Host ("Choose 1-{0}" -f ($platforms.Count + 1)) } while ($choice -notin $valid)
+    if ([int]$choice -eq $platforms.Count + 1) { return $null }
+    return $platforms[[int]$choice - 1]
+}
+
+function Get-RollbackPath([string]$platformKey) {
+    $rollbackRoot = Join-Path $repo 'rollback'
+    if ($platformKey -eq 'STEAM' -and (Test-Path -LiteralPath (Join-Path $rollbackRoot 'Engine.ini'))) {
+        return $rollbackRoot
+    }
+    return Join-Path $rollbackRoot $platformKey
 }
 
 function Get-HashOrMissing([string]$path) {
@@ -23,17 +50,25 @@ function Get-HashOrMissing([string]$path) {
 
 function Get-InstalledProfile([string]$gamePath) {
     $live = Get-HashOrMissing (Join-Path $gamePath 'Scalability.ini')
-    $maximum = Get-HashOrMissing (Join-Path $repo 'Scalability-Maximum.ini')
-    $enhanced = Get-HashOrMissing (Join-Path $repo 'Scalability.ini')
+    $maximum = Get-HashOrMissing (Join-Path $repo 'profiles\Scalability-Maximum.ini')
+    $enhanced = Get-HashOrMissing (Join-Path $repo 'profiles\Scalability.ini')
     if ($live -eq '<missing>') { return 'Default / no performance profile' }
     if ($live -eq $maximum) { return 'Maximum Performance' }
     if ($live -eq $enhanced) { return 'Enhanced Performance' }
     return 'Custom / unknown profile'
 }
 
-if (-not (Test-Path -LiteralPath $rollback)) { throw 'No rollback configuration exists yet. Run the installer first.' }
-$game = Find-EdayConfig
-if (-not $game) { throw 'E-Day settings were not found.' }
+$platforms = @(Find-PlatformConfigs)
+if ($platforms.Count -eq 0) { throw 'E-Day settings were not found.' }
+$platform = Select-Platform $platforms
+if (-not $platform) {
+    Write-Host 'No changes made.'
+    exit 0
+}
+$game = $platform.Path
+$rollback = Get-RollbackPath $platform.Key
+if (-not (Test-Path -LiteralPath $rollback)) { throw "No rollback configuration exists yet for $($platform.Name). Run the installer first." }
+Write-Host "Selected platform: $($platform.Name)" -ForegroundColor Cyan
 Write-Host "Currently installed: $(Get-InstalledProfile $game)" -ForegroundColor Cyan
 
 $same = $true
