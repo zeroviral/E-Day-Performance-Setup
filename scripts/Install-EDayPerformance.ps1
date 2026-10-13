@@ -100,34 +100,32 @@ foreach ($source in @($engineSource, $scalabilitySource)) {
     if (-not (Test-Path -LiteralPath $source)) { throw "Repository file missing: $source" }
 }
 
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$backup = Join-Path $repo ("backups\before-install-$stamp")
-New-Item -ItemType Directory -Path $backup -Force | Out-Null
-
-foreach ($name in @('Engine.ini','GameUserSettings.ini','Scalability.ini')) {
-    $source = Join-Path $game $name
-    if (Test-Path -LiteralPath $source) {
-        attrib -R $source | Out-Null
-        Copy-Item -LiteralPath $source -Destination (Join-Path $backup $name) -Force
-    } elseif ($name -eq 'Scalability.ini') {
-        New-Item -ItemType File -Path (Join-Path $backup 'Scalability.ini.absent') -Force | Out-Null
-    }
-}
-
-# Keep a clearly named, portable rollback copy alongside the repository.
 $rollback = Join-Path $repo 'rollback'
-New-Item -ItemType Directory -Path $rollback -Force | Out-Null
-foreach ($name in @('Engine.ini','GameUserSettings.ini')) {
-    Copy-Item -LiteralPath (Join-Path $backup $name) -Destination (Join-Path $rollback $name) -Force
-}
+$rollbackEngine = Join-Path $rollback 'Engine.ini'
+$rollbackSettings = Join-Path $rollback 'GameUserSettings.ini'
 $rollbackScalability = Join-Path $rollback 'Scalability.ini'
-if (Test-Path -LiteralPath (Join-Path $backup 'Scalability.ini')) {
-    Copy-Item -LiteralPath (Join-Path $backup 'Scalability.ini') -Destination $rollbackScalability -Force
-    $absentMarker = Join-Path $rollback 'Scalability.ini.absent'
-    if (Test-Path -LiteralPath $absentMarker) { Remove-Item -LiteralPath $absentMarker -Force }
+$rollbackAbsent = Join-Path $rollback 'Scalability.ini.absent'
+$rollbackReady = (Test-Path -LiteralPath $rollbackEngine) -and
+    (Test-Path -LiteralPath $rollbackSettings) -and
+    ((Test-Path -LiteralPath $rollbackScalability) -or (Test-Path -LiteralPath $rollbackAbsent))
+
+if (-not $rollbackReady) {
+    New-Item -ItemType Directory -Path $rollback -Force | Out-Null
+    foreach ($name in @('Engine.ini','GameUserSettings.ini')) {
+        $source = Join-Path $game $name
+        if (-not (Test-Path -LiteralPath $source)) { throw "Current settings file missing: $source" }
+        attrib -R $source | Out-Null
+        Copy-Item -LiteralPath $source -Destination (Join-Path $rollback $name) -Force
+    }
+    if (Test-Path -LiteralPath (Join-Path $game 'Scalability.ini')) {
+        Copy-Item -LiteralPath (Join-Path $game 'Scalability.ini') -Destination $rollbackScalability -Force
+        if (Test-Path -LiteralPath $rollbackAbsent) { Remove-Item -LiteralPath $rollbackAbsent -Force }
+    } else {
+        New-Item -ItemType File -Path $rollbackAbsent -Force | Out-Null
+    }
+    Write-Host 'Saved the default settings once in the rollback folder.' -ForegroundColor Yellow
 } else {
-    if (Test-Path -LiteralPath $rollbackScalability) { Remove-Item -LiteralPath $rollbackScalability -Force }
-    New-Item -ItemType File -Path (Join-Path $rollback 'Scalability.ini.absent') -Force | Out-Null
+    Write-Host 'Existing default rollback snapshot preserved; no new backup created.'
 }
 
 Copy-Item -LiteralPath $engineSource -Destination (Join-Path $game 'Engine.ini') -Force
@@ -135,5 +133,5 @@ Copy-Item -LiteralPath $scalabilitySource -Destination (Join-Path $game 'Scalabi
 
 Write-Host "Installed $Profile performance profile." -ForegroundColor Green
 Write-Host "Config folder: $game"
-Write-Host "Backup: $backup"
+Write-Host "Rollback snapshot: $rollback"
 Write-Host 'GameUserSettings.ini was preserved, including resolution, HDR, audio, and controls.'

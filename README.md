@@ -19,24 +19,22 @@ The live target is:
 `GameUserSettings.ini` is intentionally preserved. It contains resolution,
 HDR, audio, controls, and account-specific settings.
 
-## Backup
+## Rollback snapshot
 
-Before installation, the current settings were copied to:
+The installer saves the user's default settings once in:
 
-`backups\current-default-20261012-185300`
+`rollback\`
 
-The backup contains the current `Engine.ini` and `GameUserSettings.ini`.
-There was no live `Scalability.ini` before installation.
+It does not create a new backup when switching between profiles, so repeated
+installs do not grow the repository. The snapshot contains the current
+`Engine.ini` and `GameUserSettings.ini`, plus either the original
+`Scalability.ini` or a marker stating that it was absent.
 
-## Restore
+## Rollback
 
-Close E-Day, then run:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Restore-Default.ps1
-```
-
-This restores the backed-up files and removes the installed `Scalability.ini`.
+Close E-Day, then double-click `Rollback-EDayPerformance.cmd`. This restores
+the saved default files and removes the installed `Scalability.ini` when the
+default snapshot did not have one.
 
 ## Portable installer
 
@@ -50,8 +48,8 @@ reports the currently installed profile, then offers:
 3. Cancel.
 
 The active profile is highlighted with `[ACTIVE]` and is not offered as a
-selection. Selecting the other profile switches to it and creates a fresh
-rollback snapshot first. The
+selection. Selecting the other profile switches to it and reuses the existing
+rollback snapshot. The
 installer finds the user's E-Day config folder and changes only `Engine.ini`
 and `Scalability.ini`.
 `GameUserSettings.ini` is backed up but not overwritten.
