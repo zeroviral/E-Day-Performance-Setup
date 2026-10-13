@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$repo = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $rollback = Join-Path $repo 'rollback'
 
 function Find-EdayConfig {

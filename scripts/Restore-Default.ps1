@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$repo = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $game = Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day\Steam\6BE41AB5\Saved\Config\Windows'
 $backup = Join-Path $repo 'backups\current-default-20261012-185300'
 

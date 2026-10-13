@@ -9,7 +9,7 @@ echo.
 choice /c 12 /n /m "Choose 1 or 2: "
 if errorlevel 2 set "PROFILE=ENHANCED"
 if errorlevel 1 set "PROFILE=MAXIMUM"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Install-EDayPerformance.ps1" -Profile "%PROFILE%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\Install-EDayPerformance.ps1" -Profile "%PROFILE%"
 if errorlevel 1 echo Installation failed.
 if errorlevel 0 echo.
 pause

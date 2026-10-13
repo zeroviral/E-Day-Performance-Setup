@@ -33,7 +33,7 @@ There was no live `Scalability.ini` before installation.
 Close E-Day, then run:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Restore-Default.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Restore-Default.ps1
 ```
 
 This restores the backed-up files and removes the installed `Scalability.ini`.
@@ -68,5 +68,5 @@ Performance, Enhanced Performance, Default/no profile, or Custom/unknown.
 The PowerShell entrypoint is also available directly:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Rollback-EDayPerformance.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Rollback-EDayPerformance.ps1
 ```
