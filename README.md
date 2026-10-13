@@ -15,11 +15,13 @@ This repository contains the new E-Day performance configuration studied from
 This version targets the Xbox app / PC Game Pass (WinGDK) build. The live
 target is:
 
-`%LOCALAPPDATA%\FairlightConcept\Saved\Config\WinGDK`
+`%LOCALAPPDATA%\Microsoft\Gears of War E-Day\WinGDK\<id>\Saved\Config\WinGDK`
 
-If that folder is missing, the scripts search `%LOCALAPPDATA%\FairlightConcept`
-and `%LOCALAPPDATA%\Microsoft\Gears of War E-Day` for a `WinGDK` config folder
-containing `GameUserSettings.ini`. Steam folders are ignored. Launch E-Day from
+The scripts search `%LOCALAPPDATA%\Microsoft\Gears of War E-Day` and the older
+`%LOCALAPPDATA%\FairlightConcept` location for `WinGDK` config folders and use
+the one whose `GameUserSettings.ini` was written most recently. Steam folders
+are ignored. Run `Find-EDayConfig.cmd` to list every E-Day config file on the
+PC if the installer picks the wrong folder. Launch E-Day from
 the Xbox app at least once before running the installer so the folder exists.
 
 `GameUserSettings.ini` is intentionally preserved. It contains resolution,
@@ -31,6 +33,9 @@ The installer saves the user's default settings once in:
 
 `rollback\`
 
+The snapshot records which config folder it came from
+(`config-folder.txt`); if the installer later targets a different folder, the
+old snapshot is moved to `rollback-old-<timestamp>\` and a fresh one is taken.
 It does not create a new backup when switching between profiles, so repeated
 installs do not grow the repository. The snapshot contains the current
 `Engine.ini` and `GameUserSettings.ini`, plus either the original

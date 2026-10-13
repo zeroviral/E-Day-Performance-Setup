@@ -4,21 +4,20 @@ $rollback = Join-Path $repo 'rollback'
 
 function Find-EdayConfig {
     # Xbox app / PC Game Pass (WinGDK) builds keep their config under
-    # %LOCALAPPDATA%\FairlightConcept\Saved\Config\WinGDK.
-    $preferred = Join-Path $env:LOCALAPPDATA 'FairlightConcept\Saved\Config\WinGDK'
-    if (Test-Path -LiteralPath (Join-Path $preferred 'GameUserSettings.ini')) { return $preferred }
+    # %LOCALAPPDATA%\Microsoft\Gears of War E-Day\WinGDK\<id>\Saved\Config\WinGDK.
+    # Older builds used %LOCALAPPDATA%\FairlightConcept\Saved\Config\WinGDK, so pick
+    # the WinGDK folder whose GameUserSettings.ini the game wrote most recently.
     $roots = @(
-        (Join-Path $env:LOCALAPPDATA 'FairlightConcept'),
-        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day')
+        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day'),
+        (Join-Path $env:LOCALAPPDATA 'FairlightConcept')
     )
-    foreach ($root in $roots) {
+    $candidates = foreach ($root in $roots) {
         if (-not (Test-Path -LiteralPath $root)) { continue }
-        $match = Get-ChildItem -LiteralPath $root -Directory -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -eq 'WinGDK' -and $_.FullName -notmatch '\\Steam\\' } |
-            Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'GameUserSettings.ini') } |
-            Select-Object -First 1
-        if ($match) { return $match.FullName }
+        Get-ChildItem -LiteralPath $root -Filter 'GameUserSettings.ini' -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Directory.Name -eq 'WinGDK' -and $_.FullName -notmatch '\\Steam\\' }
     }
+    $match = $candidates | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($match) { return $match.DirectoryName }
     return $null
 }
 
@@ -38,8 +37,10 @@ function Get-InstalledProfile([string]$gamePath) {
 }
 
 if (-not (Test-Path -LiteralPath $rollback)) { throw 'No rollback configuration exists yet. Run the installer first.' }
-$game = Find-EdayConfig
-if (-not $game) { throw 'Xbox app E-Day settings were not found.' }
+$rollbackSource = Join-Path $rollback 'config-folder.txt'
+$game = if (Test-Path -LiteralPath $rollbackSource) { (Get-Content -LiteralPath $rollbackSource -Raw).Trim() } else { Find-EdayConfig }
+if (-not $game -or -not (Test-Path -LiteralPath $game)) { throw 'Xbox app E-Day settings were not found.' }
+Write-Host "Config folder: $game"
 Write-Host "Currently installed: $(Get-InstalledProfile $game)" -ForegroundColor Cyan
 
 $same = $true

@@ -8,21 +8,20 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
 function Find-EdayConfig {
     # Xbox app / PC Game Pass (WinGDK) builds keep their config under
-    # %LOCALAPPDATA%\FairlightConcept\Saved\Config\WinGDK.
-    $preferred = Join-Path $env:LOCALAPPDATA 'FairlightConcept\Saved\Config\WinGDK'
-    if (Test-Path -LiteralPath (Join-Path $preferred 'GameUserSettings.ini')) { return $preferred }
+    # %LOCALAPPDATA%\Microsoft\Gears of War E-Day\WinGDK\<id>\Saved\Config\WinGDK.
+    # Older builds used %LOCALAPPDATA%\FairlightConcept\Saved\Config\WinGDK, so pick
+    # the WinGDK folder whose GameUserSettings.ini the game wrote most recently.
     $roots = @(
-        (Join-Path $env:LOCALAPPDATA 'FairlightConcept'),
-        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day')
+        (Join-Path $env:LOCALAPPDATA 'Microsoft\Gears of War E-Day'),
+        (Join-Path $env:LOCALAPPDATA 'FairlightConcept')
     )
-    foreach ($root in $roots) {
+    $candidates = foreach ($root in $roots) {
         if (-not (Test-Path -LiteralPath $root)) { continue }
-        $match = Get-ChildItem -LiteralPath $root -Directory -Recurse -ErrorAction SilentlyContinue |
-            Where-Object { $_.Name -eq 'WinGDK' -and $_.FullName -notmatch '\\Steam\\' } |
-            Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'GameUserSettings.ini') } |
-            Select-Object -First 1
-        if ($match) { return $match.FullName }
+        Get-ChildItem -LiteralPath $root -Filter 'GameUserSettings.ini' -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Directory.Name -eq 'WinGDK' -and $_.FullName -notmatch '\\Steam\\' }
     }
+    $match = $candidates | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($match) { return $match.DirectoryName }
     return $null
 }
 
@@ -111,12 +110,26 @@ $rollbackEngine = Join-Path $rollback 'Engine.ini'
 $rollbackSettings = Join-Path $rollback 'GameUserSettings.ini'
 $rollbackScalability = Join-Path $rollback 'Scalability.ini'
 $rollbackAbsent = Join-Path $rollback 'Scalability.ini.absent'
+$rollbackSource = Join-Path $rollback 'config-folder.txt'
 $rollbackReady = (Test-Path -LiteralPath $rollbackEngine) -and
     (Test-Path -LiteralPath $rollbackSettings) -and
     ((Test-Path -LiteralPath $rollbackScalability) -or (Test-Path -LiteralPath $rollbackAbsent))
 
+# A snapshot taken from a different (or unrecorded) config folder cannot restore
+# this one, so set it aside and capture a fresh one.
+if ($rollbackReady) {
+    $snapshotFolder = if (Test-Path -LiteralPath $rollbackSource) { (Get-Content -LiteralPath $rollbackSource -Raw).Trim() } else { '' }
+    if ($snapshotFolder -ne $game) {
+        $archive = Join-Path $repo ('rollback-old-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+        Move-Item -LiteralPath $rollback -Destination $archive
+        Write-Host "Previous rollback snapshot was for a different folder; moved it to $archive" -ForegroundColor Yellow
+        $rollbackReady = $false
+    }
+}
+
 if (-not $rollbackReady) {
     New-Item -ItemType Directory -Path $rollback -Force | Out-Null
+    Set-Content -LiteralPath $rollbackSource -Value $game -Encoding UTF8
     foreach ($name in @('Engine.ini','GameUserSettings.ini')) {
         $source = Join-Path $game $name
         if (-not (Test-Path -LiteralPath $source)) { throw "Current settings file missing: $source" }
